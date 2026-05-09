@@ -46,7 +46,6 @@ jobs:
       attestations: write   # SLSA provenance attestation
     steps:
       - uses: actions/checkout@v6
-      - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
       - uses: sigstore/cosign-installer@v4.1.2
 
@@ -54,8 +53,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # value=v… makes metadata-action's semver expansion work for both
-          # tag pushes and workflow_dispatch.
+          # value=v… so semver expansion works for both tag and dispatch.
           tags: |
             type=semver,pattern={{version}},value=v${{ needs.vars.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=v${{ needs.vars.outputs.version }}

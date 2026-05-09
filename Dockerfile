@@ -3,7 +3,9 @@
 ARG GO_VERSION=1.26
 ARG DEBIAN_VERSION=trixie
 
-FROM golang:${GO_VERSION}-${DEBIAN_VERSION} AS builder
+# --platform=$BUILDPLATFORM keeps the Go toolchain native; cross-compilation
+# to TARGETARCH is handled by `go build` itself, no QEMU required.
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-${DEBIAN_VERSION} AS builder
 ARG VERSION=dev
 ARG TARGETOS
 ARG TARGETARCH
