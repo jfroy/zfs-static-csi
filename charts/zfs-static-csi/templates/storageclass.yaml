@@ -1,0 +1,16 @@
+{{- if .Values.storageClass.create -}}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageClass.name }}
+  labels:
+    {{- include "zfs-static-csi.labels" . | nindent 4 }}
+  {{- with .Values.storageClass.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+# no-provisioner: this driver does not implement CreateVolume/DeleteVolume.
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: {{ .Values.storageClass.reclaimPolicy }}
+volumeBindingMode: {{ .Values.storageClass.volumeBindingMode }}
+{{- end }}

@@ -57,6 +57,13 @@ serviceAccount:
   name: ""
   annotations: {}
 
+storageClass:
+  create: true
+  name: zfs-static
+  reclaimPolicy: Retain
+  volumeBindingMode: WaitForFirstConsumer
+  annotations: {}
+
 updateStrategy:
   type: RollingUpdate
   rollingUpdate:
