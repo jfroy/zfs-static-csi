@@ -16,6 +16,8 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: zfs-static
+  mountOptions:
+    - noatime
   csi:
     driver: zfs-static-csi.jfroy.github.com
     # volumeHandle IS the dataset name.
