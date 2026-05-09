@@ -25,20 +25,17 @@ nodeDriverRegistrar:
     tag: v2.16.0
     pullPolicy: IfNotPresent
 
-nodeSelector:
-  zfs-static-csi.jfroy.github.com/enabled: "true"
-
-# Use when nodeSelector (key=value) isn't expressive enough — e.g. matching a
-# label regardless of its value (typical for OS-managed ZFS labels). Set
-# nodeSelector to {} alongside this if you want affinity to be the only gate.
+# Constrain placement with nodeSelector or affinity. For label-existence
+# (e.g. Talos's extensions.talos.dev/zfs), use affinity:
 #
-# affinity:
-#   nodeAffinity:
-#     requiredDuringSchedulingIgnoredDuringExecution:
-#       nodeSelectorTerms:
-#         - matchExpressions:
-#             - key: extensions.talos.dev/zfs
-#               operator: Exists
+#   affinity:
+#     nodeAffinity:
+#       requiredDuringSchedulingIgnoredDuringExecution:
+#         nodeSelectorTerms:
+#           - matchExpressions:
+#               - key: extensions.talos.dev/zfs
+#                 operator: Exists
+nodeSelector: {}
 affinity: {}
 
 tolerations:

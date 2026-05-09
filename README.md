@@ -69,10 +69,12 @@ charts/zfs-static-csi/      Helm chart (single source of truth for manifests)
 examples/                   example StorageClass + PV + PVC
 ```
 
-The plugin runs only on storage nodes (`zfs-static-csi.jfroy.github.com/enabled=true`
-node label by default — adjust the `nodeSelector` value in the chart). It
-contains the CSI driver and `csi-node-driver-registrar`; no controller pod is
-deployed because there is no Controller service.
+By default the DaemonSet schedules on every node and fails closed on nodes
+without ZFS. Operators typically constrain it to storage nodes via
+`nodeSelector` or `affinity` — see the chart's `values.yaml` for examples
+(custom label, or the Talos `extensions.talos.dev/zfs` Exists pattern). Each
+pod contains the CSI driver and `csi-node-driver-registrar`; no controller
+pod is deployed because there is no Controller service.
 
 ## Build
 
@@ -90,15 +92,14 @@ The chart is published as an OCI artifact to GHCR and signed with cosign on
 every tagged release.
 
 ```sh
-# 1. Label storage nodes so the DaemonSet schedules on them.
-kubectl label node <node-name> zfs-static-csi.jfroy.github.com/enabled=true
-
-# 2. Install the chart.
 helm install zfs-static-csi \
   oci://ghcr.io/jfroy/charts/zfs-static-csi \
   --version <X.Y.Z> \
   --namespace kube-system
 ```
+
+To constrain placement, pass `--set-json` or a values file with a
+`nodeSelector` or `affinity` (see the chart's `values.yaml`).
 
 ### Without Helm at install time
 
@@ -106,7 +107,6 @@ If you don't want Helm in the install path, render the chart locally and
 apply the result. The chart is the only source of truth for manifests:
 
 ```sh
-kubectl label node <node-name> zfs-static-csi.jfroy.github.com/enabled=true
 helm template zfs-static-csi charts/zfs-static-csi \
   --namespace kube-system \
   | kubectl apply -n kube-system -f -

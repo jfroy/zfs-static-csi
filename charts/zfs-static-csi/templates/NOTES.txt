@@ -1,10 +1,21 @@
 zfs-static-csi {{ .Chart.AppVersion }} has been installed in namespace {{ .Release.Namespace }}.
 
-The DaemonSet is gated by a node selector. By default it schedules only on
-nodes labelled with `zfs-static-csi.jfroy.github.com/enabled=true`. Label your
-storage nodes:
+By default the DaemonSet schedules on every node. The driver fails closed on
+nodes without ZFS, but the pod is privileged, so you'll typically want to
+constrain it. Pick one:
 
-  kubectl label node <node-name> zfs-static-csi.jfroy.github.com/enabled=true
+  # Talos / OS-managed label (matches regardless of value):
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: extensions.talos.dev/zfs
+                operator: Exists
+
+  # Or a custom label you apply yourself:
+  nodeSelector:
+    zfs-static-csi.jfroy.github.com/enabled: "true"
 
 To expose a ZFS dataset:
 
