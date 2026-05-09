@@ -28,6 +28,19 @@ nodeDriverRegistrar:
 nodeSelector:
   zfs-static-csi.jfroy.github.com/enabled: "true"
 
+# Use when nodeSelector (key=value) isn't expressive enough — e.g. matching a
+# label regardless of its value (typical for OS-managed ZFS labels). Set
+# nodeSelector to {} alongside this if you want affinity to be the only gate.
+#
+# affinity:
+#   nodeAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#       nodeSelectorTerms:
+#         - matchExpressions:
+#             - key: extensions.talos.dev/zfs
+#               operator: Exists
+affinity: {}
+
 tolerations:
   - operator: Exists
 
