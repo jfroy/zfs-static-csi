@@ -53,11 +53,10 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # value=v… so semver expansion works for both tag and dispatch.
           tags: |
-            type=semver,pattern={{version}},value=v${{ needs.vars.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.vars.outputs.version }}
-            type=semver,pattern={{major}},value=v${{ needs.vars.outputs.version }}
+            type=semver,pattern={{version}},value=${{ needs.vars.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.vars.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.vars.outputs.version }}
             type=raw,value=latest
             type=sha,format=short
 
