@@ -1,0 +1,84 @@
+name: chart
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Chart and app version (without leading v, e.g. 1.2.3)
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  CHART_REPO: ${{ github.repository_owner }}/charts
+  CHART_NAME: zfs-static-csi
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: latest
+      - uses: sigstore/cosign-installer@v3
+
+      - id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            REF="${GITHUB_REF#refs/tags/}"
+            VERSION="${REF#v}"
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "could not determine version" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - run: helm lint "charts/${CHART_NAME}"
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+        run: |
+          mkdir -p dist
+          helm package "charts/${CHART_NAME}" \
+            --version "$VERSION" \
+            --app-version "$VERSION" \
+            --destination dist
+          ls -la dist
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login "${REGISTRY}" -u "${{ github.actor }}" --password-stdin
+
+      - id: push
+        name: Push chart
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+        # helm push writes Digest: to stderr — capture both streams.
+        run: |
+          set -o pipefail
+          OUT=$(helm push "dist/${CHART_NAME}-${VERSION}.tgz" \
+                "oci://${REGISTRY}/${CHART_REPO}" 2>&1 | tee /dev/stderr)
+          DIGEST=$(printf '%s\n' "$OUT" | awk -F': ' '/Digest:/{print $2; exit}' | tr -d '\r')
+          if [ -z "$DIGEST" ]; then
+            echo "could not extract digest from helm push output" >&2
+            exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Sign chart
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "${REGISTRY}/${CHART_REPO}/${CHART_NAME}@${DIGEST}"

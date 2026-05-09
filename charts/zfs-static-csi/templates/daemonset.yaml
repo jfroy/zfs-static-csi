@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "zfs-static-csi.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zfs-static-csi.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "zfs-static-csi.selectorLabels" . | nindent 6 }}
+  updateStrategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zfs-static-csi.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "zfs-static-csi.serviceAccountName" . }}
+      hostNetwork: true
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: csi-driver
+          image: {{ include "zfs-static-csi.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --endpoint=$(CSI_ENDPOINT)
+            - --node-id=$(NODE_NAME)
+            {{- with .Values.hostPrefix }}
+            - --host-prefix={{ . }}
+            {{- end }}
+            - --v={{ .Values.logLevel }}
+          env:
+            - name: CSI_ENDPOINT
+              value: unix:///csi/csi.sock
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: kubelet-dir
+              mountPath: {{ .Values.kubeletDir }}
+              # Bidirectional: bind mounts created here propagate out to kubelet.
+              mountPropagation: Bidirectional
+            {{- if .Values.hostPrefix }}
+            - name: host-root
+              mountPath: {{ .Values.hostPrefix }}
+              # HostToContainer: see new host-side ZFS mounts as they appear,
+              # without leaking container mounts back out.
+              mountPropagation: HostToContainer
+            {{- end }}
+        - name: node-driver-registrar
+          image: "{{ .Values.nodeDriverRegistrar.image.repository }}:{{ .Values.nodeDriverRegistrar.image.tag }}"
+          imagePullPolicy: {{ .Values.nodeDriverRegistrar.image.pullPolicy }}
+          args:
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path={{ .Values.kubeletDir }}/plugins/{{ .Values.driverName }}/csi.sock
+            - --v={{ .Values.logLevel }}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+      volumes:
+        - name: plugin-dir
+          hostPath:
+            path: {{ .Values.kubeletDir }}/plugins/{{ .Values.driverName }}
+            type: DirectoryOrCreate
+        - name: registration-dir
+          hostPath:
+            path: {{ .Values.kubeletDir }}/plugins_registry
+            type: Directory
+        - name: kubelet-dir
+          hostPath:
+            path: {{ .Values.kubeletDir }}
+            type: Directory
+        {{- if .Values.hostPrefix }}
+        - name: host-root
+          hostPath:
+            path: /
+            type: Directory
+        {{- end }}

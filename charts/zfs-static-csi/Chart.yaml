@@ -1,0 +1,18 @@
+apiVersion: v2
+name: zfs-static-csi
+description: A small Kubernetes CSI driver that exposes existing ZFS datasets as static PVs.
+type: application
+# version / appVersion are overridden by the release workflow at package time.
+version: 0.0.0-development
+appVersion: "0.0.0-development"
+kubeVersion: ">=1.27.0-0"
+home: https://github.com/jfroy/zfs-static-csi
+sources:
+  - https://github.com/jfroy/zfs-static-csi
+maintainers:
+  - name: Jean-Francois Roy
+keywords:
+  - csi
+  - zfs
+  - storage
+  - static

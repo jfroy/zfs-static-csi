@@ -1,0 +1,40 @@
+zfs-static-csi {{ .Chart.AppVersion }} has been installed in namespace {{ .Release.Namespace }}.
+
+The DaemonSet is gated by a node selector. By default it schedules only on
+nodes labelled with `zfs-static-csi.jfroy.github.com/enabled=true`. Label your
+storage nodes:
+
+  kubectl label node <node-name> zfs-static-csi.jfroy.github.com/enabled=true
+
+To expose a ZFS dataset:
+
+  1. On a storage node, opt the dataset in:
+
+       zfs set com.github.jfroy.zfs-static-csi:share=on tank/data/myapp
+
+  2. Create a PV that references it:
+
+       apiVersion: v1
+       kind: PersistentVolume
+       metadata:
+         name: myapp-data
+       spec:
+         capacity:
+           storage: 100Gi
+         accessModes: [ReadWriteOnce]
+         persistentVolumeReclaimPolicy: Retain
+         csi:
+           driver: {{ .Values.driverName }}
+           volumeHandle: tank/data/myapp
+         nodeAffinity:
+           required:
+             nodeSelectorTerms:
+               - matchExpressions:
+                   - key: topology.zfs-static-csi.jfroy.github.com/hostname
+                     operator: In
+                     values: ["<node-name>"]
+
+Verify the driver is registered:
+
+  kubectl get csidriver {{ .Values.driverName }}
+  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/name={{ include "zfs-static-csi.name" . }}

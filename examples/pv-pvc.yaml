@@ -1,0 +1,49 @@
+# Prerequisite on the storage node:
+#   zfs set com.github.jfroy.zfs-static-csi:share=on tank/data/myapp
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: zfs-static
+# no-provisioner: this driver does not implement CreateVolume/DeleteVolume.
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: myapp-data
+spec:
+  capacity:
+    # Metadata only; the driver does not enforce capacity.
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: zfs-static
+  csi:
+    driver: zfs-static-csi.jfroy.github.com
+    # volumeHandle IS the dataset name.
+    volumeHandle: tank/data/myapp
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: topology.zfs-static-csi.jfroy.github.com/hostname
+              operator: In
+              values:
+                - storage-node-1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myapp-data
+spec:
+  storageClassName: zfs-static
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  volumeName: myapp-data
