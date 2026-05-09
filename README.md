@@ -42,11 +42,10 @@ running ZFS).
 * No mountpoint paths in PV specs — the driver looks them up from ZFS.
 * Datasets must be **explicitly** opted in; system datasets cannot leak into
   pods by accident.
-* Fails closed if the dataset is missing or unmounted instead of silently
-  bind-mounting an empty directory.
-* Topology is reported automatically via
-  `topology.zfs-static-csi.jfroy.github.com/hostname`, so the scheduler can pick a
-  node without operator intervention.
+* Fails closed if the dataset is missing or unmounted. Local PVs don't
+  verify the path is a mount point — if the dataset isn't mounted, they
+  happily bind whatever is at the path (usually the node's root filesystem)
+  into the pod.
 
 ## What this driver is **not**
 

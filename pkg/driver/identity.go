@@ -19,17 +19,7 @@ func (s *identityServer) GetPluginInfo(ctx context.Context, req *csi.GetPluginIn
 }
 
 func (s *identityServer) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
-	return &csi.GetPluginCapabilitiesResponse{
-		Capabilities: []*csi.PluginCapability{
-			{
-				Type: &csi.PluginCapability_Service_{
-					Service: &csi.PluginCapability_Service{
-						Type: csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS,
-					},
-				},
-			},
-		},
-	}, nil
+	return &csi.GetPluginCapabilitiesResponse{}, nil
 }
 
 func (s *identityServer) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {

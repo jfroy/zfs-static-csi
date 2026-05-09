@@ -1,6 +1,5 @@
 // Package driver implements the CSI gRPC services for zfs-static-csi:
-// Identity + Node, with VOLUME_ACCESSIBILITY_CONSTRAINTS. There is no
-// Controller service; volumes are static.
+// Identity + Node only. There is no Controller service; volumes are static.
 package driver
 
 import (
@@ -23,8 +22,6 @@ import (
 
 	"github.com/jfroy/zfs-static-csi/pkg/zfs"
 )
-
-const TopologyKeyHostname = "topology.zfs-static-csi.jfroy.github.com/hostname"
 
 type Config struct {
 	Name     string

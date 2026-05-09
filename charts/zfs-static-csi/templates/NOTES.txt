@@ -42,7 +42,7 @@ To expose a ZFS dataset:
            required:
              nodeSelectorTerms:
                - matchExpressions:
-                   - key: topology.zfs-static-csi.jfroy.github.com/hostname
+                   - key: kubernetes.io/hostname
                      operator: In
                      values: ["<node-name>"]
 

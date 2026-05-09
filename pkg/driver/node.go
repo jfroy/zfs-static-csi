@@ -23,11 +23,6 @@ type nodeServer struct {
 func (s *nodeServer) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	return &csi.NodeGetInfoResponse{
 		NodeId: s.driver.cfg.NodeID,
-		AccessibleTopology: &csi.Topology{
-			Segments: map[string]string{
-				TopologyKeyHostname: s.driver.cfg.NodeID,
-			},
-		},
 	}, nil
 }
 
