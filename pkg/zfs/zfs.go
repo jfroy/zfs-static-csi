@@ -5,7 +5,9 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -44,24 +46,48 @@ type Options struct {
 	// the binary, its libraries, and /dev/zfs come from the host filesystem
 	// (ABI-matched with the host kernel module).
 	ChrootDir string
+	// BinaryPath, when set, is the absolute path of the zfs binary (relative
+	// to ChrootDir if ChrootDir is set). Empty: search defaultBinarySearchPaths.
+	BinaryPath string
+}
+
+// defaultBinarySearchPaths is the search list used when BinaryPath is empty.
+// Order matters: most-common locations first.
+var defaultBinarySearchPaths = []string{
+	"/usr/sbin/zfs",
+	"/sbin/zfs",
+	"/usr/local/sbin/zfs",
+	"/usr/local/bin/zfs",
 }
 
 type Client struct {
 	run Runner
 }
 
-func NewClient(opts Options) *Client {
-	return &Client{run: makeRunner(opts.ChrootDir)}
+func NewClient(opts Options) (*Client, error) {
+	if opts.ChrootDir == "" {
+		binary := opts.BinaryPath
+		if binary == "" {
+			binary = "zfs"
+		}
+		return &Client{run: simpleRunner(binary)}, nil
+	}
+	binary, err := resolveChrootBinary(opts.ChrootDir, opts.BinaryPath)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{run: chrootRunner(opts.ChrootDir, binary)}, nil
 }
 
-func makeRunner(chrootDir string) Runner {
-	if chrootDir == "" {
-		return func(ctx context.Context, args ...string) ([]byte, error) {
-			return exec.CommandContext(ctx, "zfs", args...).CombinedOutput()
-		}
-	}
+func simpleRunner(binary string) Runner {
 	return func(ctx context.Context, args ...string) ([]byte, error) {
-		cmd := exec.CommandContext(ctx, "/usr/sbin/zfs", args...)
+		return exec.CommandContext(ctx, binary, args...).CombinedOutput()
+	}
+}
+
+func chrootRunner(chrootDir, binary string) Runner {
+	return func(ctx context.Context, args ...string) ([]byte, error) {
+		cmd := exec.CommandContext(ctx, binary, args...)
 		// Chroot is applied between fork and execve, so the binary path and
 		// its dynamic linker / libs all resolve against chrootDir.
 		cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: chrootDir}
@@ -69,6 +95,23 @@ func makeRunner(chrootDir string) Runner {
 		cmd.Dir = "/"
 		return cmd.CombinedOutput()
 	}
+}
+
+// resolveChrootBinary returns the in-chroot path to zfs, validating that the
+// file exists at chrootDir+path from outside the chroot.
+func resolveChrootBinary(chrootDir, override string) (string, error) {
+	candidates := defaultBinarySearchPaths
+	if override != "" {
+		candidates = []string{override}
+	}
+	for _, p := range candidates {
+		full := filepath.Join(chrootDir, p)
+		fi, err := os.Stat(full)
+		if err == nil && fi.Mode().IsRegular() {
+			return p, nil
+		}
+	}
+	return "", fmt.Errorf("zfs binary not found in chroot %q (searched %v)", chrootDir, candidates)
 }
 
 func (c *Client) GetDataset(ctx context.Context, name string) (*Dataset, error) {

@@ -14,6 +14,10 @@ driverName: zfs-static-csi.jfroy.github.com
 # disables both; the image does not bundle zfs userspace.
 hostPrefix: /host
 
+# Override path to the zfs binary inside hostPrefix. Empty auto-searches
+# /usr/sbin, /sbin, /usr/local/sbin, /usr/local/bin.
+zfsBinary: ""
+
 logLevel: 2
 
 # /var/lib/kubelet on stock kubeadm; k0s, microk8s and friends override.

@@ -32,6 +32,9 @@ type Config struct {
 	// which the host root is bind-mounted (used to translate ZFS-reported
 	// mountpoints) and the chroot dir for the zfs(8) child process.
 	HostPrefix string
+	// ZfsBinary, when set, overrides the default search list for the zfs(8)
+	// binary. Path is interpreted relative to HostPrefix when chrooting.
+	ZfsBinary string
 }
 
 type Driver struct {
@@ -41,12 +44,19 @@ type Driver struct {
 	server  *grpc.Server
 }
 
-func New(cfg Config) *Driver {
+func New(cfg Config) (*Driver, error) {
+	zfsClient, err := zfs.NewClient(zfs.Options{
+		ChrootDir:  cfg.HostPrefix,
+		BinaryPath: cfg.ZfsBinary,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("init zfs client: %w", err)
+	}
 	return &Driver{
 		cfg:     cfg,
-		zfs:     zfs.NewClient(zfs.Options{ChrootDir: cfg.HostPrefix}),
+		zfs:     zfsClient,
 		mounter: mount.New(""),
-	}
+	}, nil
 }
 
 func (d *Driver) Run() error {

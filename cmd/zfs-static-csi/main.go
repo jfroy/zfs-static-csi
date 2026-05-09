@@ -23,6 +23,7 @@ func main() {
 		endpoint   = flag.String("endpoint", "unix:///csi/csi.sock", "CSI endpoint (unix:// or tcp://)")
 		nodeID     = flag.String("node-id", "", "Node identifier; typically the Kubernetes node name")
 		hostPrefix = flag.String("host-prefix", "", "Path prefix prepended to ZFS-reported mountpoints to translate them into the driver container's view (e.g. /host)")
+		zfsBinary  = flag.String("zfs-binary", "", "Path to the zfs binary inside host-prefix; empty = auto-search /usr/sbin, /sbin, /usr/local/sbin, /usr/local/bin")
 		showVer    = flag.Bool("version", false, "Print version and exit")
 	)
 	flag.Parse()
@@ -36,13 +37,18 @@ func main() {
 		os.Exit(2)
 	}
 
-	d := driver.New(driver.Config{
+	d, err := driver.New(driver.Config{
 		Name:       driverName,
 		Version:    version,
 		NodeID:     *nodeID,
 		Endpoint:   *endpoint,
 		HostPrefix: *hostPrefix,
+		ZfsBinary:  *zfsBinary,
 	})
+	if err != nil {
+		klog.ErrorS(err, "driver init failed")
+		os.Exit(1)
+	}
 
 	if err := d.Run(); err != nil {
 		klog.ErrorS(err, "driver exited with error")

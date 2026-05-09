@@ -3,6 +3,8 @@ package zfs
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -130,5 +132,60 @@ func TestValidateName(t *testing.T) {
 		if !c.ok && err == nil {
 			t.Errorf("validateName(%q) = nil, want error", c.name)
 		}
+	}
+}
+
+func TestResolveChrootBinary(t *testing.T) {
+	tmp := t.TempDir()
+
+	if _, err := resolveChrootBinary(tmp, ""); err == nil {
+		t.Error("expected error when no zfs binary present, got nil")
+	}
+
+	// Binary at /usr/local/sbin/zfs only.
+	localDir := filepath.Join(tmp, "usr/local/sbin")
+	if err := os.MkdirAll(localDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(localDir, "zfs"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := resolveChrootBinary(tmp, "")
+	if err != nil {
+		t.Fatalf("auto-resolve: %v", err)
+	}
+	if got != "/usr/local/sbin/zfs" {
+		t.Errorf("got %q, want /usr/local/sbin/zfs", got)
+	}
+
+	// /usr/sbin/zfs ranks higher than /usr/local/sbin/zfs.
+	sbinDir := filepath.Join(tmp, "usr/sbin")
+	if err := os.MkdirAll(sbinDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sbinDir, "zfs"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err = resolveChrootBinary(tmp, "")
+	if err != nil {
+		t.Fatalf("auto-resolve with both: %v", err)
+	}
+	if got != "/usr/sbin/zfs" {
+		t.Errorf("got %q, want /usr/sbin/zfs (precedence)", got)
+	}
+
+	// Override forces a specific path.
+	got, err = resolveChrootBinary(tmp, "/usr/local/sbin/zfs")
+	if err != nil {
+		t.Fatalf("override: %v", err)
+	}
+	if got != "/usr/local/sbin/zfs" {
+		t.Errorf("got %q, want /usr/local/sbin/zfs (override)", got)
+	}
+
+	// Override pointing at a missing file errors.
+	if _, err := resolveChrootBinary(tmp, "/nope/zfs"); err == nil {
+		t.Error("expected error for missing override, got nil")
 	}
 }

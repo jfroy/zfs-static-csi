@@ -43,6 +43,9 @@ spec:
             {{- with .Values.hostPrefix }}
             - --host-prefix={{ . }}
             {{- end }}
+            {{- with .Values.zfsBinary }}
+            - --zfs-binary={{ . }}
+            {{- end }}
             - --v={{ .Values.logLevel }}
           env:
             - name: CSI_ENDPOINT
