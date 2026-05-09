@@ -1,0 +1,145 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version (without leading v, e.g. 1.2.3)
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  CHART_REPO: ${{ github.repository_owner }}/charts
+  CHART_NAME: zfs-static-csi
+
+jobs:
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            REF="${GITHUB_REF#refs/tags/}"
+            VERSION="${REF#v}"
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "could not determine version" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: vars
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write       # cosign keyless signing via Fulcio
+      attestations: write   # SLSA provenance attestation
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: sigstore/cosign-installer@v4.1.2
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # value=v… makes metadata-action's semver expansion work for both
+          # tag pushes and workflow_dispatch.
+          tags: |
+            type=semver,pattern={{version}},value=v${{ needs.vars.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.vars.outputs.version }}
+            type=semver,pattern={{major}},value=v${{ needs.vars.outputs.version }}
+            type=raw,value=latest
+            type=sha,format=short
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ needs.vars.outputs.version }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Sign image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: cosign sign --yes "${IMAGE}@${DIGEST}"
+
+  chart:
+    needs: [vars, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: latest
+      - uses: sigstore/cosign-installer@v4.1.2
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: helm lint "charts/${CHART_NAME}"
+
+      - name: Package
+        env:
+          VERSION: ${{ needs.vars.outputs.version }}
+        run: |
+          mkdir -p dist
+          helm package "charts/${CHART_NAME}" \
+            --version "$VERSION" \
+            --app-version "$VERSION" \
+            --destination dist
+
+      - id: push
+        name: Push chart
+        env:
+          VERSION: ${{ needs.vars.outputs.version }}
+        # helm push writes Digest: to stderr — capture both streams.
+        run: |
+          set -o pipefail
+          OUT=$(helm push "dist/${CHART_NAME}-${VERSION}.tgz" \
+                "oci://${REGISTRY}/${CHART_REPO}" 2>&1 | tee /dev/stderr)
+          DIGEST=$(printf '%s\n' "$OUT" | awk -F': ' '/Digest:/{print $2; exit}' | tr -d '\r')
+          if [ -z "$DIGEST" ]; then
+            echo "could not extract digest from helm push output" >&2
+            exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Sign chart
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "${REGISTRY}/${CHART_REPO}/${CHART_NAME}@${DIGEST}"
