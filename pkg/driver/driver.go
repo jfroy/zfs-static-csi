@@ -55,7 +55,7 @@ func New(cfg Config) (*Driver, error) {
 	return &Driver{
 		cfg:     cfg,
 		zfs:     zfsClient,
-		mounter: mount.New(""),
+		mounter: newMounter(),
 	}, nil
 }
 
