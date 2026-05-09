@@ -30,6 +30,12 @@ jobs:
           version: latest
       - uses: sigstore/cosign-installer@v3
 
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - id: vars
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -56,11 +62,6 @@ jobs:
             --app-version "$VERSION" \
             --destination dist
           ls -la dist
-
-      - name: Login to GHCR
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | helm registry login "${REGISTRY}" -u "${{ github.actor }}" --password-stdin
 
       - id: push
         name: Push chart
