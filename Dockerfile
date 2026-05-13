@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.23
+# syntax=docker/dockerfile:1.24
 
 ARG GO_VERSION=1.26
 ARG DEBIAN_VERSION=trixie
