@@ -26,7 +26,7 @@ kubeletDir: /var/lib/kubelet
 nodeDriverRegistrar:
   image:
     repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
-    tag: v2.16.0
+    tag: v2.17.0
     pullPolicy: IfNotPresent
 
 # Constrain placement with nodeSelector or affinity. For label-existence
