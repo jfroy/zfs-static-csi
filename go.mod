@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/container-storage-interface/spec v1.12.0
 	golang.org/x/sys v0.47.0
-	google.golang.org/grpc v1.82.0
+	google.golang.org/grpc v1.82.1
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/mount-utils v0.36.2
 )
