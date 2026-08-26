@@ -7,7 +7,7 @@ require (
 	golang.org/x/sys v0.47.0
 	google.golang.org/grpc v1.83.0
 	k8s.io/klog/v2 v2.140.0
-	k8s.io/mount-utils v0.36.3
+	k8s.io/mount-utils v0.37.0
 )
 
 require (
@@ -17,5 +17,5 @@ require (
 	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	k8s.io/utils v0.0.0-20260507154919-ff6756f316d2 // indirect
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 )
