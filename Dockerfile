@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.27
 
-ARG GO_VERSION=1.26
+ARG GO_VERSION=1.27
 ARG DEBIAN_VERSION=trixie
 
 # --platform=$BUILDPLATFORM keeps the Go toolchain native; cross-compilation
