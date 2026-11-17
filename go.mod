@@ -3,7 +3,7 @@ module github.com/jfroy/zfs-static-csi
 go 1.27.1
 
 require (
-	github.com/container-storage-interface/spec v1.13.0
+	github.com/container-storage-interface/spec v1.14.0
 	golang.org/x/sys v0.50.0
 	google.golang.org/grpc v1.85.0
 	k8s.io/klog/v2 v2.140.0
