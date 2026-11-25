@@ -60,5 +60,7 @@ k8s.io/mount-utils v0.37.0 h1:+xWIanfIxX2i1CFzJP2KSxfi6nAgLB7M1b1xcL/xZU0=
 k8s.io/mount-utils v0.37.0/go.mod h1:uGJRC7u42QGYbHlHxt/5J2rXrfgv3XNYU3I0ZXVnAck=
 k8s.io/mount-utils v0.37.2 h1:OUmG8B4N09N1DcJPd3jADyxQoC4212cDtVAGox7Oe3g=
 k8s.io/mount-utils v0.37.2/go.mod h1:uGJRC7u42QGYbHlHxt/5J2rXrfgv3XNYU3I0ZXVnAck=
+k8s.io/mount-utils v0.37.3 h1:750Md23Iqhvq2VvPY95I8aHXJb3if7xbUIRnP16fEuA=
+k8s.io/mount-utils v0.37.3/go.mod h1:uGJRC7u42QGYbHlHxt/5J2rXrfgv3XNYU3I0ZXVnAck=
 k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 h1:jVkFFVfXdXP74B/zbO3hM3hpSFD0xvhQ5U686DPurkE=
 k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3/go.mod h1:M2s5JB1lIYP3jzZdorPLHXIPJzt9vv2muW5a6L9DtNM=
